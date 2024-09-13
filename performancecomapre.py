@@ -107,13 +107,18 @@ def add_summary(sheet, row, summary):
     else:
         summary_text = "Both runs performed equally well."
 
-
-
     bold_font = Font(bold=True)
+    blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # Light blue color
+
     sheet.append(["No.Of.Transactions Executed Faster than last run:", transactions_faster])
     sheet.append(["No.Of.Transactions Executed Slower than last run:", transactions_slower])
     sheet.append(["Overall Observation:", summary_text])
     sheet.append(["*Note:These are system generated observations. Please review Manually for a complete analysis"])
+
+    # Apply blue color to the last 4 appended rows
+    for row in sheet.iter_rows(min_row=sheet.max_row - 3, max_row=sheet.max_row, min_col=1, max_col=2):
+        for cell in row:
+            cell.fill = blue_fill
 
 
 def compare_json(json1, json2, metrics):
