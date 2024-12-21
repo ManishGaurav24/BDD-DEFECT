@@ -49,17 +49,13 @@
         <li><a href="#">Generate BDD(Jira)</a></li>
         <li><a href="#">Generate Test Data</a></li>
         <li>
-            <a href="#">Performance Results
-               <div id="analysis">Analysis</div>
-            </a>
-        </li>
+          <a href="#">Performance Results
+             <div id="analysis">Analysis</div>
+          </a>
+      </li>
+        <li><a href="#">Defect Pattern</a></li>
     </ul>
 </nav>
-
-
-
-
-
 <p class="hr">
 <p>
     {% if status %}
@@ -136,22 +132,69 @@
                     <option value="100">100</option>
                     <option value="120">120</option>
                 </select>
-                <button class="btn btn-danger mx-2" id="upload-test" onclick="initiateLoader()">Generate Test Data
+                <button class="btn btn-danger my-2" id="upload-test" onclick="initiateLoader()">Generate Test Data
                 </button>
             </form>
         </div>
-        <div class="col-md-10" id="performance-input" style="display:none;">
-    <div id="performance-info-message" class="alert alert-info mt-3"></div>
-    <form class="upload-group-performance" method="post" action="/compare_performance" enctype="multipart/form-data">
-        <label >Upload Execution 1 JSON File:</label>
-        <input class="form-control" name="json_file1" type="file" id="json-file1" accept=".json" required>
+        <div class="col-md-10" id="performance-input">
+          <div id="performance-info-message" class="alert alert-info mt-3"></div>
+          <form class="upload-group-performance" method="post" action="/compare_performance" enctype="multipart/form-data">
+              <label >Upload Execution 1 JSON File:</label>
+              <input class="form-control" name="json_file1" type="file" id="json-file1" accept=".json" required>
+      
+              <label  class="mt-3">Upload Execution 2 JSON File :</label>
+              <input class="form-control" name="json_file2" type="file" id="json-file2" accept=".json" required>
+      
+              <button class="btn btn-danger mt-5" id="compare-performance" onclick="initiateLoader()">Compare Performance</button>
+          </form>
+      </div>
+        <div class="col-md-10" id="defect-jira-input">
+            <div id="defect-jira-info-message" class="alert alert-info mt-3"></div>
+            <div class="row">
+                <!-- Button for Summarization_and_store_in_s3 -->
+                <div class="col-md-6">
+                  <form action="/trigger_summarization" method="post">
+                    <button class="btn btn-primary my-3 w-100" type="submit">
+                      Summarization and Store in S3
+                    </button>
+                  </form>
+                </div>
+    
+                <!-- Button for Embedding -->
+                <div class="col-md-6">
+                  <form action="/trigger_embedding" method="post">
+                    <button class="btn btn-primary my-3 w-100" type="submit" onclick="initiateLoader()">
+                      Start Embedding
+                    </button>
+                  </form>
+                </div>
+              </div>
+            <form class="upload-group-jira" method="post" action="/generate_defect" id="query-form" enctype="multipart/form-data">
+                <label for="jira_url1">URL:</label>
+                <input class="form-control" type="url" name="jira_url" id="jira_url1"
+                       placeholder="https://user.atlassian.net" required>
+                <label for="email1">Email:</label>
+                <input class="form-control" type="email" name="email" id="email1" required placeholder="abc@xyz.com">
+                <label for="password1">Password:</label>
+                <input class="form-control" type="password" name="password" id="password1" required>
+                <label for="board_id1">Board Name:</label>
+                <select class="form-control" name="board_id" id="board_id1" required>
+                    <option value="">Select Board</option>
+                </select>
+                <label for="sprint_id1">Sprint(Active):</label>
+                <select class="form-control" name="sprint_id" id="sprint_id1" required>
+                    <option value="">Select Sprint</option>
+                </select>
+                <label for="sprint_id1">Issue_Summary(Bug):</label>
+                <select class="form-control" name="issue_id1" id="issue_id1" required>
+                    <option value="">Select Issue</option>
+                  </select>
 
-        <label  class="mt-3">Upload Execution 2 JSON File :</label>
-        <input class="form-control" name="json_file2" type="file" id="json-file2" accept=".json" required>
-
-        <button class="btn btn-danger mt-5" id="compare-performance" onclick="initiateLoader()">Compare Performance</button>
-    </form>
-</div>
+                <button class="btn btn-danger mt-3" id="submit-defect-detecction" onclick="initiateLoader()">Defect Pattern
+                </button>
+            </form>
+        </div>
+        
 
         {% if response %}
         <div class="col-md-4" id="output">
@@ -248,6 +291,147 @@
 
 </script>
 
+<script>
+    $(document).ready(function() {
+      $("#jira_url1, #email1, #password1").change(function() {
+        var jiraUrl = $("#jira_url1").val();
+        var email = $("#email1").val();
+        var password = $("#password1").val();
+
+        // Check if all three fields are not empty
+        if (jiraUrl && email && password) {
+          // Make AJAX call to get board IDs
+          $.ajax({
+            type: "POST",
+            url: "/get_bdd_jira_boardid",
+            data: {
+              jira_url: jiraUrl,
+              email: email,
+              password: password,
+            },
+            success: function (response) {
+              $("#board_id1").empty();
+              $.each(response.board_ids, function (index, board_id) {
+                $("#board_id1").append(
+                  '<option value="' +
+                    board_id[0] +
+                    '">' +
+                    board_id[1] +
+                    "</option>"
+                );
+              });
+            },
+            error: function (xhr, status, error) {
+              console.error(error);
+              // Handle error
+            },
+          });
+        }
+      });
+
+      // Trigger AJAX call to get sprint IDs when board ID is selected
+      $("#board_id1").change(function() {
+        var jiraUrl = $("#jira_url1").val();
+        var email = $("#email1").val();
+        var password = $("#password1").val();
+        var board_id = $(this).val(); // Get the selected board ID
+
+        // Check if all four fields are not empty
+        if (jiraUrl && email && password && board_id) {
+          // Make AJAX call to get sprint IDs
+          $.ajax({
+            type: "POST",
+            url: "/get_bdd_jira_sprintid",
+            data: {
+              jira_url: jiraUrl,
+              email: email,
+              password: password,
+              board_id: board_id,
+            },
+            success: function (response) {
+              $("#sprint_id1").empty();
+              $.each(response.sprint_ids, function (index, sprint_id) {
+                $("#sprint_id1").append(
+                  '<option value="' +
+                    sprint_id[0] +
+                    '">' +
+                    sprint_id[1] +
+                    "</option>"
+                );
+              });
+            },
+            error: function (xhr, status, error) {
+              console.error(error);
+              // Handle error
+            },
+          });
+        }
+      });
+      // Trigger AJAX call to get Issues when sprint ID is selected
+      $("#sprint_id1").click(function() {
+        var jiraUrl = $("#jira_url1").val();
+        var email = $("#email1").val();
+        var password = $("#password1").val();
+        var board_id = $("#board_id1").val(); // Get the selected board ID
+        var sprint_id = $(this).val(); // Get the selected sprint ID
+
+        // Check if all four fields are not empty
+        if (jiraUrl && email && password && board_id && sprint_id) {
+          // Make AJAX call to get issues 
+          console.log("Making AJAX call to get issues...");
+          $.ajax({
+            type: "POST",
+            url: "/get_bdd_jira_issue_bug",
+            data: {
+              jira_url: jiraUrl,
+              email: email,
+              password: password,
+              board_id: board_id,
+              sprint_id: sprint_id,
+            },
+            success: function (response) {
+                console.log("AJAX call successful, received response:", response);
+              $("#issue_id1").empty();
+              // Add "Select All" option
+              let issues = response.issue_bugs
+              $("#issue_id1").append('<option value="select_all">Select All</option>');
+              $.each(response.issue_bugs, function (index, issue_bug) {
+                        $("#issue_id1").append(
+                        '<option value="' + issue_bug + '">' + issue_bug + '</option>'
+                        );
+                });
+              // Save the entire issues array in a hidden input for form submission
+              $('<input>').attr({
+                    type: 'hidden',
+                    id: 'all_issues',
+                    name: 'all_issues',
+                    value: JSON.stringify(issues)
+                }).appendTo('#query-form');
+            },
+            error: function (xhr, status, error) {
+                console.error("Error during AJAX call:", error);
+              console.error(error);
+              // Handle error
+            },
+          });
+        }else{
+            console.log("Form validation failed. Fields are missing.");
+        }
+      });
+      // Handle form submission
+      $('#query-form').on('submit', function(e) {
+         let selectedOption = $("#issue_id1").val();
+
+         if (selectedOption === "select_all") {
+        // If "Select All" is chosen, submit the entire issues array
+            let issuesArray = JSON.parse($("#all_issues").val());
+            // You can also log it to verify
+             console.log("Selected 'Select All'. Submitting all issues:", issuesArray);
+    }
+});
+
+    });
+  </script>
 </body>
 
 </html>

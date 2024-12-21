@@ -13,7 +13,7 @@ load_dotenv()
 def get_boardid(jira_url, email, password):
     board_id = []
     url = f"{jira_url}/rest/agile/1.0/board/"
-    print(url)
+    # print(url)
     try:
         response = requests.get(url, auth=(email, password))
         for value in response.json()['values']:
@@ -27,7 +27,7 @@ def get_boardid(jira_url, email, password):
 def get_sprintid(jira_url, email, password, board_id):
     sprint_id = []
     url = f"{jira_url}/rest/agile/1.0/board/{board_id}/sprint/"
-    print(url)
+    # print(url)
     try:
         response = requests.get(url, auth=(email, password))
         for value in response.json()['values']:
@@ -42,12 +42,39 @@ def get_sprintid(jira_url, email, password, board_id):
 def get_issues(jira_url, email, password, board_id, sprint_id):
     user_story = []
     url = f"{jira_url}/rest/agile/1.0/board/{board_id}/sprint/{sprint_id}/issue"
+    # print(url)
+    try:
+        response = requests.get(url, auth=(email, password))
+        # print(response.json())
+        # for issue in response.json()['issues']:
+        #     if issue['fields']['sprint']['state'] == 'active':
+        #         user_story.append(issue['fields']['description'])
+        # return user_story
+        for issue in response.json().get('issues', []):
+            description = issue['fields'].get('description', '')
+            # print(f"Full Description: {description}")  # Inspect the description field
+            
+            if issue['fields']['sprint']['state'] == 'active' and description:
+                user_story.append(description)
+        return user_story
+    except Exception as e:
+        print(f"Error: {e}")
+        return user_story
+
+def get_issues_bug(jira_url, email, password, board_id, sprint_id):
+    user_story = []
+    url = f"{jira_url}/rest/agile/1.0/board/{board_id}/sprint/{sprint_id}/issue"
     print(url)
     try:
         response = requests.get(url, auth=(email, password))
-        for issue in response.json()['issues']:
-            if issue['fields']['sprint']['state'] == 'active':
-                user_story.append(issue['fields']['description'])
+        for issue in response.json().get('issues', []):
+            summary = issue['fields'].get('summary', '')
+            
+            if issue['fields']['issuetype']['name'] == 'Bug' and summary:
+                # user_story.append(summary)
+                user_story.append(issue['id']+": "+ summary)
+
         return user_story
-    except:
+    except Exception as e:
+        print(f"Error: {e}")
         return user_story

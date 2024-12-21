@@ -7,7 +7,7 @@
 }
 .hr{
   border-left: 2px solid black;
-  height: 39.5rem;
+  height: 48rem;
   position: absolute;
 
   top:95px;
@@ -39,6 +39,7 @@ body {
 .menu a {
     color: #000000;
     text-decoration: none;
+    padding: 5px 10px;
     border-radius: 5px;
 }
 .menu li a:hover {
@@ -72,7 +73,13 @@ body {
     top: 100px;
     left: 230px;
 }
-#performance-input{
+#defect-jira-input {
+    display: none;
+    position: absolute;
+    top: 100px;
+    left: 230px;
+}
+#performance-input {
     display: none;
     position: absolute;
     top: 100px;
@@ -90,10 +97,9 @@ position: absolute;
     left: 250px;
 }
 #analysis{
-padding-left:37px;
-left:20px;
-}
-
+    padding-left:37px;
+    left:20px;
+    }
 
 .upload-group .form-control {
     flex-grow: 1;
