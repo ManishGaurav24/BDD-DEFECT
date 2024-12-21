@@ -12,6 +12,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 import asyncio
 from langchain.retrievers import ContextualCompressionRetriever
+from flashrank import Ranker
 from langchain.retrievers.document_compressors import FlashrankRerank
 
 # Load environment variables
@@ -61,7 +62,9 @@ async def generating_defect(issues):
             raise ValueError("Vectorstore not initialized. Please run embeddings first.")
 
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0)
-    compressor = FlashrankRerank()
+    
+    flashrank_client = Ranker(model_name="ms-marco-MiniLM-L-12-v2")
+    compressor = FlashrankRerank(client=flashrank_client, top_n=3)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=vectorstore.as_retriever())
 
     # Consolidated responses
