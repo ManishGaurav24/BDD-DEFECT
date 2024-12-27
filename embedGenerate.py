@@ -67,7 +67,7 @@ async def generating_defect(issues):
             raise ValueError("Vectorstore not initialized. Please run embeddings first.")
 
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0)
-    model_name = "ms-marco-MiniLM-L-12-v2"
+    model_name = "ms-marco-TinyBERT-L-2-v2"
     flashrank_client = Ranker(model_name=model_name)
     compressor = FlashrankRerank(client=flashrank_client, top_n=3, model=model_name)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=vectorstore.as_retriever())
