@@ -1,16 +1,16 @@
 import os
+import asyncio
+import boto3
+import logging
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders.csv_loader import CSVLoader
-import time
-import boto3
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
-import asyncio
 from langchain.retrievers import ContextualCompressionRetriever
 from flashrank import Ranker
 from langchain.retrievers.document_compressors import FlashrankRerank
@@ -30,6 +30,10 @@ s3_client = boto3.client(
     # aws_session_token=AWS_SESSION_TOKEN,
 )
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Global variables to hold embeddings and vector store
 embeddings = None
 vectorstore = None
@@ -46,11 +50,12 @@ def vector_embedding(file_path):
         for id, final_document in enumerate(final_documents):
             final_document.metadata["id"] = id
         vectorstore = Chroma.from_documents(final_documents, embeddings, persist_directory="chroma_db")
-        # vectorstore.persist()
         if vectorstore:
-            print("Embedding completed, and vector database is ready.")
+            # print("Embedding completed, and vector database is ready.")
+            logger.info("Embedding completed, and vector database is ready.")
     except Exception as e:
-        print(f"An error occurred during embedding: {e}")
+        # print(f"An error occurred during embedding: {e}")
+        logger.error(f"An error occurred during embedding: {e}")
         import traceback
         traceback.print_exc()
     
@@ -62,9 +67,9 @@ async def generating_defect(issues):
             raise ValueError("Vectorstore not initialized. Please run embeddings first.")
 
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0)
-    
-    flashrank_client = Ranker(model_name="ms-marco-MiniLM-L-12-v2")
-    compressor = FlashrankRerank(client=flashrank_client, top_n=3)
+    model_name = "ms-marco-MiniLM-L-12-v2"
+    flashrank_client = Ranker(model_name=model_name)
+    compressor = FlashrankRerank(client=flashrank_client, top_n=3, model=model_name)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=vectorstore.as_retriever())
 
     # Consolidated responses
@@ -103,16 +108,18 @@ async def generating_defect(issues):
 
     # Save the consolidated CSV to S3
     response = s3_client.put_object(
-        Bucket=AWS_TEST_OUTPUT_BUCKET, Key=f"TestDefect1.csv", Body=consolidated_csv
+        Bucket=AWS_TEST_OUTPUT_BUCKET, Key=f"DefectPattern.csv", Body=consolidated_csv
     )
 
     status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-    url = f"https://{AWS_TEST_OUTPUT_BUCKET}.s3.amazonaws.com/TestDefect1.csv"
-    print(url)
+    url = f"https://{AWS_TEST_OUTPUT_BUCKET}.s3.amazonaws.com/DefectPattern.csv"
+    # print(url)
+    logger.info(url)
 
     if status == 200:
         return url
     else:
+        logger.error("Failed to upload CSV to S3.")
         return None
 
 # async def generating_defect(issues):
@@ -164,11 +171,11 @@ async def generating_defect(issues):
 
 #     # Save the consolidated CSV to S3
 #     response = s3_client.put_object(
-#         Bucket=AWS_TEST_OUTPUT_BUCKET, Key=f"TestDefect1.csv", Body=consolidated_csv
+#         Bucket=AWS_TEST_OUTPUT_BUCKET, Key=f"DefectPattern.csv", Body=consolidated_csv
 #     )
 
 #     status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-#     url = f"https://{AWS_TEST_OUTPUT_BUCKET}.s3.amazonaws.com/TestDefect1.csv"
+#     url = f"https://{AWS_TEST_OUTPUT_BUCKET}.s3.amazonaws.com/DefectPattern.csv"
 #     print(url)
 
 #     if status == 200:
